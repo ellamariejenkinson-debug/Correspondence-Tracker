@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Correspondence Tracker</title>
+  <style>
+    /* ── FT Color Palette ──────────────────────────────────────── */
+    :root {
+      --ft-cream:       #FFF1E5;
+      --ft-cream-dark:  #F2E1D0;
+      --ft-ink:         #33302E;
+      --ft-claret:      #990F3D;
+      --ft-teal:        #0D7680;
+      --ft-sky:         #CCE6FF;
+      --ft-border:      #C5B9AD;
+      --ft-muted:       #77736F;
+      --ft-white:       #FFFFFF;
+      --ft-selected-bg: #FBE8D0;
+    }
+
+    /* ── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--ft-cream);
+      color: var(--ft-ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      background: var(--ft-ink);
+      color: var(--ft-cream);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      border-bottom: 3px solid var(--ft-claret);
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--ft-cream);
+    }
+
+    header span.tag {
+      background: var(--ft-claret);
+      color: var(--ft-white);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 2px;
+    }
+
+    header .count {
+      margin-left: auto;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.8rem;
+      color: var(--ft-border);
+    }
+
+    /* ── Search bar ───────────────────────────────────────────── */
+    .search-bar {
+      background: var(--ft-cream-dark);
+      border-bottom: 1px solid var(--ft-border);
+      padding: 8px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .search-bar input {
+      flex: 1;
+      border: 1px solid var(--ft-border);
+      background: var(--ft-white);
+      color: var(--ft-ink);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.85rem;
+      padding: 5px 10px;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .search-bar input:focus { border-color: var(--ft-teal); }
+
+    .search-bar button {
+      background: var(--ft-claret);
+      color: var(--ft-white);
+      border: none;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 5px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover { background: #7a0c31; }
+
+    /* ── Main two-column layout ───────────────────────────────── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── Left panel ───────────────────────────────────────────── */
+    .left-panel {
+      width: 50%;
+      border-right: 2px solid var(--ft-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--ft-border);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ft-muted);
+      background: var(--ft-cream);
+      flex-shrink: 0;
+    }
+
+    .letter-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* ── Letter list item ─────────────────────────────────────── */
+    .letter-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--ft-border);
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .letter-item:hover { background: var(--ft-cream-dark); }
+
+    .letter-item.active {
+      background: var(--ft-selected-bg);
+      border-left: 3px solid var(--ft-claret);
+      padding-left: 13px;
+    }
+
+    .letter-item.active::after {
+      content: '';
+      position: absolute;
+      right: -2px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--ft-claret);
+    }
+
+    .item-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .item-date {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--ft-claret);
+      white-space: nowrap;
+    }
+
+    .item-type-badge {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      border: 1px solid;
+    }
+
+    .badge-claim      { color: var(--ft-claret); border-color: var(--ft-claret); background: #fff0f3; }
+    .badge-response   { color: var(--ft-teal);   border-color: var(--ft-teal);   background: #f0fafa; }
+    .badge-notice     { color: #7a4e00;           border-color: #b87800;          background: #fff8e6; }
+    .badge-settlement { color: #2a5e2a;           border-color: #4a9e4a;          background: #f0f8f0; }
+    .badge-general    { color: var(--ft-muted);   border-color: var(--ft-border); background: var(--ft-cream); }
+
+    .item-parties {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ft-ink);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-subject {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.78rem;
+      color: var(--ft-ink);
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-themes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .theme-tag {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.65rem;
+      background: var(--ft-sky);
+      color: var(--ft-teal);
+      border: 1px solid #a8d4f5;
+      padding: 1px 6px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    /* ── Right panel ──────────────────────────────────────────── */
+    .right-panel {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .preview-area {
+      overflow-y: auto;
+      flex: 1;
+      padding: 24px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--ft-muted);
+      text-align: center;
+      gap: 12px;
+    }
+
+    .empty-state .icon { font-size: 3rem; opacity: 0.35; }
+    .empty-state p { font-family: Arial, Helvetica, sans-serif; font-size: 0.9rem; }
+
+    /* ── Preview card ─────────────────────────────────────────── */
+    .preview-card {}
+
+    .preview-subject {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--ft-ink);
+      line-height: 1.3;
+      margin-bottom: 16px;
+      border-bottom: 2px solid var(--ft-claret);
+      padding-bottom: 12px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 4px 10px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.82rem;
+      margin-bottom: 18px;
+    }
+
+    .meta-label {
+      font-weight: 700;
+      color: var(--ft-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.7rem;
+      padding-top: 2px;
+    }
+
+    .meta-value { color: var(--ft-ink); }
+
+    .themes-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+
+    .theme-pill {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.72rem;
+      background: var(--ft-sky);
+      color: var(--ft-teal);
+      border: 1px solid #a8d4f5;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    .section-title {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ft-muted);
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--ft-border);
+    }
+
+    .letter-body {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--ft-ink);
+      white-space: pre-wrap;
+      margin-bottom: 28px;
+      background: var(--ft-white);
+      border: 1px solid var(--ft-border);
+      border-radius: 2px;
+      padding: 16px 20px;
+    }
+
+    /* ── Cross-references ─────────────────────────────────────── */
+    .xref-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .xref-item {
+      background: var(--ft-cream-dark);
+      border: 1px solid var(--ft-border);
+      border-left: 3px solid var(--ft-teal);
+      border-radius: 2px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .xref-item:hover { background: #e8d5c0; }
+
+    .xref-date {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--ft-teal);
+      margin-bottom: 2px;
+    }
+
+    .xref-parties {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--ft-ink);
+      margin-bottom: 2px;
+    }
+
+    .xref-subject {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.78rem;
+      color: var(--ft-muted);
+    }
+
+    .xref-reason {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.7rem;
+      color: var(--ft-teal);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* ── Scrollbar styling ────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--ft-cream); }
+    ::-webkit-scrollbar-thumb { background: var(--ft-border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ft-muted); }
+
+    /* ── No-results message ───────────────────────────────────── */
+    .no-results {
+      padding: 24px 16px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.85rem;
+      color: var(--ft-muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Correspondence Tracker</h1>
+  <span class="tag">Disputes</span>
+  <span class="count" id="count-label">— letters</span>
+</header>
+
+<div class="search-bar">
+  <input type="text" id="search-input" placeholder="Search by party, subject, theme…" />
+  <button onclick="clearSearch()">Clear</button>
+</div>
+
+<div class="workspace">
+  <!-- Left panel -->
+  <div class="left-panel">
+    <div class="panel-header">All Correspondence — Newest First</div>
+    <div class="letter-list" id="letter-list"></div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="panel-header">Letter Preview</div>
+    <div class="preview-area" id="preview-area">
+      <div class="empty-state">
+        <div class="icon">✉</div>
+        <p>Select a letter from the left panel to view its full details and cross-references.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Sample correspondence data ───────────────────────────────────
+const LETTERS = [
+  {
+    id: 1,
+    date: "2025-09-15",
+    from: "Mercer Design & Build Ltd",
+    to: "Ms Eleanor Whitfield",
+    subject: "Contract Confirmation – Renovation Works at 14 Elmswood Avenue",
+    type: "general",
+    themes: ["contract", "renovation", "payment", "schedule", "kitchen", "electrical"],
+    body: `Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+Tel: 01233 887 412
+
+15 September 2025
+
+Ms Eleanor Whitfield
+14 Elmswood Avenue
+London SW11 3AB
+
+Dear Ms Whitfield,
+
+Re: Confirmation of Contract – Renovation Works
+
+Thank you for signing the works agreement dated 12 September 2025. We are pleased to confirm that we will be commencing the renovation of your property at the above address.
+
+Scope of Works Confirmed:
+- Kitchen installation (full strip and refit)
+- Electrical rewiring throughout ground floor
+- Structural alterations to rear extension
+Total Contract Sum: £48,500
+
+Commencement Date: 20 September 2025
+Estimated Completion: 15 December 2025
+
+Payment Schedule:
+- Deposit (25%): £12,125 – due on commencement
+- Stage payment (50%): £24,250 – due on structural completion
+- Final payment (25%): £12,125 – due on practical completion
+
+Please do not hesitate to contact us if you have any questions.
+
+Yours sincerely,
+Daniel Mercer
+Director, Mercer Design & Build Ltd`
+  },
+  {
+    id: 2,
+    date: "2025-12-10",
+    from: "Ms Eleanor Whitfield",
+    to: "Mercer Design & Build Ltd",
+    subject: "Notice of Defects and Incomplete Works – Urgent",
+    type: "notice",
+    themes: ["defects", "completion", "electrical", "kitchen", "breach", "deadline"],
+    body: `14 Elmswood Avenue
+London SW11 3AB
+
+10 December 2025
+
+Mr Daniel Mercer
+Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+
+Dear Mr Mercer,
+
+Re: Notice of Defects and Failure to Complete – 14 Elmswood Avenue
+
+I am writing to formally notify you that, as of today's date, the renovation works at my property are not complete and a number of serious defects have been identified.
+
+The agreed completion date was 15 December 2025. I am concerned that this deadline will not be met, and that the works completed to date are not of satisfactory quality.
+
+Issues Identified:
+
+1. ELECTRICAL WORKS
+   The ground-floor rewiring has been carried out only in part. I have been informed by an independent electrician that exposed cabling is present in the hallway and that earthing at the consumer unit is non-compliant. This presents a safety hazard.
+
+2. KITCHEN INSTALLATION
+   The kitchen units have been delivered and partially fitted, but fitting is approximately 60% complete. No worktops, sinks or appliances have been connected.
+
+3. STRUCTURAL ALTERATIONS
+   The rear extension works appear to deviate from the agreed drawings. I request immediate clarification.
+
+I require your written response by 17 December 2025 setting out:
+(a) your plan to complete all outstanding works; and
+(b) the proposed new completion date.
+
+Yours sincerely,
+Eleanor Whitfield`
+  },
+  {
+    id: 3,
+    date: "2026-01-05",
+    from: "Ms Eleanor Whitfield",
+    to: "Mercer Design & Build Ltd",
+    subject: "Second Notice – Failure to Respond or Remedy Defects",
+    type: "notice",
+    themes: ["defects", "remedy", "deadline", "breach", "electrical", "completion"],
+    body: `14 Elmswood Avenue
+London SW11 3AB
+
+5 January 2026
+
+Mr Daniel Mercer
+Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+
+SECOND FORMAL NOTICE
+
+Dear Mr Mercer,
+
+Re: Continued Failure to Complete Works and Remedy Defects
+
+I refer to my letter of 10 December 2025, to which I have received no written response. I have attempted to contact you by telephone on four occasions without success.
+
+The position as at today's date is as follows:
+
+- The works remain materially incomplete.
+- The electrical defects I identified have not been remedied.
+- The kitchen is still not functional.
+- I have not been able to occupy my kitchen since September 2025.
+- I have incurred additional accommodation costs as a result.
+
+I hereby give you 14 days' notice to attend the property and present a remedial programme. If I do not receive a substantive response by 19 January 2026, I will have no alternative but to instruct solicitors.
+
+Please treat this letter as urgent.
+
+Yours sincerely,
+Eleanor Whitfield`
+  },
+  {
+    id: 4,
+    date: "2026-01-22",
+    from: "Mercer Design & Build Ltd",
+    to: "Ms Eleanor Whitfield",
+    subject: "Response to Your Notices – Proposed Remedial Programme",
+    type: "response",
+    themes: ["remedy", "programme", "completion", "delay", "defects", "kitchen"],
+    body: `Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+
+22 January 2026
+
+Ms Eleanor Whitfield
+14 Elmswood Avenue
+London SW11 3AB
+
+Dear Ms Whitfield,
+
+Re: Renovation Works – Response to Notices of 10 December 2025 and 5 January 2026
+
+I apologise for the delay in responding. We have experienced significant difficulties over the Christmas period, including the illness of two key members of our team and a supply delay with the kitchen worktops.
+
+We acknowledge that the works are not yet complete and that you have experienced inconvenience. We intend to rectify the outstanding matters as follows:
+
+Proposed Remedial Programme:
+- W/C 26 January 2026: Return to site, complete electrical works, obtain Part P certificate
+- W/C 2 February 2026: Complete kitchen installation including worktops, sink and appliance connections
+- W/C 9 February 2026: Final snagging and structural sign-off
+- Target Practical Completion: 13 February 2026
+
+We do not accept that we are in breach of contract. The delays were caused by matters beyond our reasonable control. We remain committed to completing the works to a high standard.
+
+We would appreciate the opportunity to discuss this matter further at the property on 24 January 2026 if convenient.
+
+Yours sincerely,
+Daniel Mercer
+Director, Mercer Design & Build Ltd`
+  },
+  {
+    id: 5,
+    date: "2026-02-18",
+    from: "Ms Eleanor Whitfield",
+    to: "Mercer Design & Build Ltd",
+    subject: "Works Still Incomplete – Final Notice Before Legal Action",
+    type: "notice",
+    themes: ["breach", "completion", "legal action", "costs", "electrical", "defects", "kitchen"],
+    body: `14 Elmswood Avenue
+London SW11 3AB
+
+18 February 2026
+
+Mr Daniel Mercer
+Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+
+WITHOUT PREJUDICE SAVE AS TO COSTS
+
+FINAL NOTICE BEFORE LEGAL ACTION
+
+Dear Mr Mercer,
+
+Re: Renovation Works – Final Notice
+
+I refer to all previous correspondence. I note that the remedial programme you set out in your letter of 22 January 2026 has not been adhered to.
+
+As of today's date:
+1. The electrical works are still not complete. No Part P certificate has been provided.
+2. The kitchen installation remains incomplete – the sink has been fitted but the oven and hob connections have not been made.
+3. The structural alterations to the rear extension have not been signed off by building control.
+
+I have now engaged an independent building surveyor, whose report I attach. The surveyor concludes that:
+- The electrical works as carried out are non-compliant with BS 7671:2018.
+- The kitchen installation does not meet the specification in the original contract.
+- Structural modifications deviate from the agreed drawings by approximately 150mm.
+
+I am no longer prepared to wait. Unless you provide a written programme to complete all works by 27 February 2026 AND attend site no later than 21 February 2026, I shall instruct solicitors to pursue:
+(a) the cost of engaging an alternative contractor;
+(b) my additional accommodation and living costs; and
+(c) damages for breach of contract.
+
+This is your final opportunity to resolve this matter without litigation.
+
+Yours sincerely,
+Eleanor Whitfield`
+  },
+  {
+    id: 6,
+    date: "2026-03-31",
+    from: "Harrington & Blythe Solicitors",
+    to: "Mercer Design & Build Ltd",
+    subject: "Letter Before Claim – Breach of Contract – Renovation Works",
+    type: "claim",
+    themes: ["breach", "claim", "damages", "contract", "electrical", "kitchen", "legal proceedings"],
+    body: `Harrington & Blythe Solicitors
+125 Chancery Lane
+London WC2A 1PU
+Tel: 020 7946 0823
+
+31 March 2026
+
+Mr Daniel Mercer
+Mercer Design & Build Ltd
+48 Ashford Industrial Estate, Unit 12
+Ashford, Kent TN23 7DZ
+
+LETTER BEFORE CLAIM
+
+Dear Mr Mercer,
+
+Re: Breach of Contract – Renovation Works at 14 Elmswood Avenue, London SW11 3AB
+
+We act on behalf of our client, Ms Eleanor Whitfield. We are instructed to write regarding your failure to properly perform renovation works under a contract dated 12 September 2025.
+
+Background
+On 12 September 2025, our client entered into a written agreement with Mercer Design & Build Ltd for the renovation of her residential property, including kitchen installation, electrical rewiring, and structural alterations, for a total contract sum of £48,500.
+
+Works commenced on 20 September 2025 and were due to be completed by 15 December 2025. Despite repeated assurances, the works remain incomplete and, where completed, are defective.
+
+Our client has raised concerns on multiple occasions: by letter dated 10 December 2025, 5 January 2026, and 18 February 2026. You have failed to remedy the defects or complete the outstanding works within a reasonable time.
+
+Claim
+Our client's position is that you are in breach of contract. In particular:
+- You have failed to complete the works by the agreed completion date;
+- The electrical works are defective and non-compliant with applicable safety standards;
+- The kitchen installation is incomplete and not fit for purpose;
+- Structural alterations have been carried out without proper adherence to agreed specifications.
+
+Loss and Damage:
+- £12,750 – cost of engaging an alternative contractor to complete and rectify the works
+- £2,300  – temporary accommodation costs due to the property being uninhabitable
+- £1,150  – additional professional inspection and surveyor fees
+
+Total sum claimed: £16,200
+
+Legal Basis
+The claim is brought for breach of contract and, in the alternative, under the Supply of Goods and Services Act 1982 and/or the Consumer Rights Act 2015.
+
+What Our Client Requires
+1. Payment of £16,200 within 14 days of this letter; and
+2. Written confirmation that no further sums are outstanding under the contract.
+
+Deadline for Response
+You are required to provide a full written response by no later than 14 April 2026.
+
+If a satisfactory response is not received, our client will commence proceedings in the County Court without further notice.
+
+This letter is sent in compliance with the Pre-Action Protocol under the Civil Procedure Rules.
+
+Yours faithfully,
+Harrington & Blythe Solicitors`
+  },
+  {
+    id: 7,
+    date: "2026-04-09",
+    from: "Ashford & Partners LLP",
+    to: "Harrington & Blythe Solicitors",
+    subject: "Response to Letter Before Claim on Behalf of Mercer Design & Build Ltd",
+    type: "response",
+    themes: ["defence", "delay", "force majeure", "breach", "counterclaim", "damages", "payment"],
+    body: `Ashford & Partners LLP
+22 The Parade
+Ashford, Kent TN24 8LQ
+Tel: 01233 541 900
+
+9 April 2026
+
+Harrington & Blythe Solicitors
+125 Chancery Lane
+London WC2A 1PU
+
+WITHOUT PREJUDICE SAVE AS TO COSTS
+
+Dear Sirs,
+
+Re: Mercer Design & Build Ltd v Whitfield – Response to Letter Before Claim
+
+We act on behalf of Mercer Design & Build Ltd ("our client") and acknowledge your letter of 31 March 2026.
+
+Our client denies that it is in breach of contract and disputes the quantum of the sums claimed. Our client's position is as follows:
+
+1. Delays: The works were delayed in part due to matters outside our client's control, including supply chain disruption and the illness of key personnel. Our client notified Ms Whitfield of these matters verbally on multiple occasions.
+
+2. Defects: Our client does not accept that the works are defective to the extent alleged. The electrical inspection referred to was carried out by a person unknown to our client and was not given the opportunity to attend. Our client's own engineer has confirmed that works met the specification in all material respects.
+
+3. Quantum: The sum of £12,750 alleged for an alternative contractor is disputed. Our client could have completed the remaining works for no more than £4,200.
+
+4. Counterclaim: Our client reserves the right to bring a counterclaim for:
+   - Outstanding stage payment of £8,500 due on structural completion
+   - Loss of profit on the contract: £3,800
+   Total: £12,300
+
+Our client remains willing to engage in mediation to resolve this dispute without litigation.
+
+Please confirm within 14 days whether your client is prepared to engage in ADR.
+
+Yours faithfully,
+Ashford & Partners LLP`
+  },
+  {
+    id: 8,
+    date: "2026-04-15",
+    from: "Harrington & Blythe Solicitors",
+    to: "Ashford & Partners LLP",
+    subject: "Reply to Defence – ADR Proposal and Disclosure Request",
+    type: "response",
+    themes: ["ADR", "mediation", "disclosure", "counterclaim", "breach", "damages", "evidence"],
+    body: `Harrington & Blythe Solicitors
+125 Chancery Lane
+London WC2A 1PU
+Tel: 020 7946 0823
+
+15 April 2026
+
+Ashford & Partners LLP
+22 The Parade
+Ashford, Kent TN24 8LQ
+
+Dear Sirs,
+
+Re: Whitfield v Mercer Design & Build Ltd
+
+We are in receipt of your letter dated 9 April 2026 and have taken our client's instructions.
+
+ADR
+Our client is willing in principle to engage in mediation. We propose that the parties agree a mediator from the CEDR Panel and that mediation take place within 28 days. Please confirm your agreement and propose dates.
+
+Disclosure
+Pursuant to the Pre-Action Protocol, we formally request the following documents:
+1. All communications between your client and sub-contractors regarding the works.
+2. The independent engineer's report referred to in your letter.
+3. All invoices and receipts relating to materials and labour.
+4. Your client's programme of works and any revised programmes.
+5. Any insurance documentation.
+
+Please provide these documents within 14 days.
+
+Counterclaim
+Our client disputes the alleged stage payment of £8,500. The contract provides that the stage payment is due only upon satisfactory structural completion, which has not been certified by building control. Our client therefore denies that any sum is outstanding.
+
+Evidence
+We enclose copies of the following documents for your client's review:
+- Independent surveyor's report (J. Harman BSc MRICS, 12 February 2026)
+- Invoices from substitute contractor (Claridge Building Services)
+- Temporary accommodation receipts (17 November 2025 – 28 February 2026)
+
+We look forward to your client's prompt response.
+
+Yours faithfully,
+Harrington & Blythe Solicitors`
+  }
+];
+
+// ── Utility helpers ─────────────────────────────────────────────
+function formatDate(iso) {
+  const [y, m, d] = iso.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+function badgeClass(type) {
+  return { claim:'badge-claim', response:'badge-response', notice:'badge-notice', settlement:'badge-settlement' }[type] || 'badge-general';
+}
+
+function badgeLabel(type) {
+  return { claim:'Claim', response:'Response', notice:'Notice', settlement:'Settlement', general:'Correspondence' }[type] || type;
+}
+
+// ── Cross-reference logic ───────────────────────────────────────
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Returns the set of significant tokens (words >3 chars) from a party name. */
+function partyTokens(name) {
+  return new Set(
+    name.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+  );
+}
+
+/** True when two party names share at least one significant token. */
+function partiesOverlap(a, b) {
+  const ta = partyTokens(a);
+  for (const token of partyTokens(b)) {
+    if (ta.has(token)) return true;
+  }
+  return false;
+}
+
+function findRelated(letter, allLetters) {
+  const related = [];
+  for (const other of allLetters) {
+    if (other.id === letter.id) continue;
+    const reasons = [];
+
+    // Shared parties: check both sides of each letter against each other
+    const partyOverlap = [letter.from, letter.to].some(p =>
+      [other.from, other.to].some(q => p && q && partiesOverlap(p, q))
+    );
+    if (partyOverlap) reasons.push('shared parties');
+
+    // Shared themes (≥2)
+    const sharedThemes = letter.themes.filter(t => other.themes.includes(t));
+    if (sharedThemes.length >= 2) reasons.push(`themes: ${sharedThemes.slice(0,3).join(', ')}`);
+
+    // Date proximity (within 60 days)
+    const daysDiff = Math.abs(new Date(letter.date) - new Date(other.date)) / MS_PER_DAY;
+    if (daysDiff <= 60) reasons.push(`${Math.round(daysDiff)}d apart`);
+
+    if (reasons.length > 0) {
+      related.push({ letter: other, reason: reasons.slice(0,2).join(' · '), score: reasons.length });
+    }
+  }
+  related.sort((a, b) => b.score - a.score || new Date(b.letter.date) - new Date(a.letter.date));
+  return related.slice(0, 5);
+}
+
+// ── State ───────────────────────────────────────────────────────
+let activeId = null;
+let displayedLetters = [...LETTERS].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+// ── Render list ─────────────────────────────────────────────────
+function renderList(letters) {
+  const container = document.getElementById('letter-list');
+  document.getElementById('count-label').textContent =
+    `${letters.length} letter${letters.length !== 1 ? 's' : ''}`;
+
+  if (!letters.length) {
+    container.innerHTML = '<div class="no-results">No letters match your search.</div>';
+    return;
+  }
+
+  container.innerHTML = letters.map(l => `
+    <div class="letter-item${l.id === activeId ? ' active' : ''}" onclick="selectLetter(${l.id})">
+      <div class="item-meta">
+        <span class="item-date">${formatDate(l.date)}</span>
+        <span class="item-type-badge ${badgeClass(l.type)}">${badgeLabel(l.type)}</span>
+      </div>
+      <div class="item-parties">${escHtml(l.from)} → ${escHtml(l.to)}</div>
+      <div class="item-subject">${escHtml(l.subject)}</div>
+      <div class="item-themes">${l.themes.slice(0,5).map(t => `<span class="theme-tag">${escHtml(t)}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+// ── Render preview ──────────────────────────────────────────────
+function renderPreview(id) {
+  const letter = LETTERS.find(l => l.id === id);
+  if (!letter) return;
+
+  const related = findRelated(letter, LETTERS);
+  const relatedHtml = related.length
+    ? related.map(r => `
+        <div class="xref-item" onclick="selectLetter(${r.letter.id})">
+          <div class="xref-date">${formatDate(r.letter.date)}</div>
+          <div class="xref-parties">${escHtml(r.letter.from)} → ${escHtml(r.letter.to)}</div>
+          <div class="xref-subject">${escHtml(r.letter.subject)}</div>
+          <div class="xref-reason">↳ ${escHtml(r.reason)}</div>
+        </div>`).join('')
+    : '<p style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--ft-muted)">No cross-references found.</p>';
+
+  document.getElementById('preview-area').innerHTML = `
+    <div class="preview-card">
+      <div class="preview-subject">${escHtml(letter.subject)}</div>
+      <div class="meta-grid">
+        <span class="meta-label">Date</span>      <span class="meta-value">${formatDate(letter.date)}</span>
+        <span class="meta-label">From</span>      <span class="meta-value">${escHtml(letter.from)}</span>
+        <span class="meta-label">To</span>        <span class="meta-value">${escHtml(letter.to)}</span>
+        <span class="meta-label">Type</span>      <span class="meta-value"><span class="item-type-badge ${badgeClass(letter.type)}">${badgeLabel(letter.type)}</span></span>
+      </div>
+      <div class="section-title">Key Themes</div>
+      <div class="themes-row">
+        ${letter.themes.map(t => `<span class="theme-pill">${escHtml(t)}</span>`).join('')}
+      </div>
+      <div class="section-title">Letter Content</div>
+      <div class="letter-body">${escHtml(letter.body)}</div>
+      <div class="section-title">Cross-References (${related.length})</div>
+      <div class="xref-list">${relatedHtml}</div>
+    </div>`;
+}
+
+// ── Actions ─────────────────────────────────────────────────────
+function selectLetter(id) {
+  activeId = id;
+  renderList(displayedLetters);
+  renderPreview(id);
+  // Scroll preview to top
+  document.getElementById('preview-area').scrollTop = 0;
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  displayedLetters = [...LETTERS].sort((a, b) => new Date(b.date) - new Date(a.date));
+  renderList(displayedLetters);
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Search ───────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', function () {
+  const q = this.value.trim().toLowerCase();
+  if (!q) {
+    displayedLetters = [...LETTERS].sort((a, b) => new Date(b.date) - new Date(a.date));
+  } else {
+    displayedLetters = LETTERS.filter(l =>
+      l.from.toLowerCase().includes(q) ||
+      l.to.toLowerCase().includes(q) ||
+      l.subject.toLowerCase().includes(q) ||
+      l.themes.some(t => t.toLowerCase().includes(q)) ||
+      l.body.toLowerCase().includes(q)
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+  renderList(displayedLetters);
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+renderList(displayedLetters);
+</script>
+</body>
+</html>
